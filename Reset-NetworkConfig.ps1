@@ -1,6 +1,6 @@
 ﻿#basic networking reset script
 #written by Zac Cash
-$github = ""
+$github = "https://raw.githubusercontent.com/zac-cash/Reset-Win10Network/main/Reset-NetworkConfig.ps1"
 
 #functions
 function Test-Administrator {  
@@ -11,7 +11,7 @@ function Invoke-elevation {
     do {$2decision = read-host "[1] Pull Script from online`n[2] Open Powershell as Administrator for script to be pasted"} while (($2decision -ne "1") -and ($2decision -ne  "2"))
     switch ($2decision) {
         1 { 
-            $command = Invoke-RestMethod $github
+            $command = "Invoke-RestMethod $github | invoke-expression"
             Start-Process powershell -ArgumentList "-NoExit -Command $command" -Credential (Get-credential -Credential "$env:COMPUTERNAME\LocalAdmin or Admin")
             Pause
             exit
@@ -103,7 +103,6 @@ function Disable-IPv6 {
     Disable-NetAdapterBinding -InterfaceAlias * -ComponentID ms_tcpip6
     write-host "`n============================`n"
 }
-
 function reset-TCPIPstack {
     Write-host "Invoking: netsh int ip reset`n============================"
     netsh int ip reset
@@ -119,7 +118,6 @@ function invoke-fullreset {
     reset-dnscache
 }
 function invoke-SubMenu {
-
     $IndividualMenu = New-Object System.Collections.ObjectModel.Collection[System.Management.Automation.Host.ChoiceDescription]
     $Options = @(
         ("&Reset TCP/IP Stack ", "netsh int ip reset"),
@@ -175,6 +173,8 @@ M. Main Menu
     }
     
 }
+
+#End Functions
 #Test if script is running under administrator context.
 if ((Test-Administrator)){
     Write-Host "Warning! Script is not running in an administrator context.`nA good portion of these utilites require these permissions."-ForegroundColor Red
