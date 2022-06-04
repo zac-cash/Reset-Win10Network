@@ -242,7 +242,7 @@ M. Main Menu
 
 #End Functions
 #Test if script is running under administrator context.
-if ((Test-Administrator)){
+if (-not(Test-Administrator)){
     Write-Host "Warning! Script is not running in an administrator context.`nA good portion of these utilites require these permissions."-ForegroundColor Red
     Write-Host "Would you like to attempt to restart as admin? You will be prompted for credentials." -ForegroundColor Yellow
     do {$decision = read-host "y/n"} while (($decision -ne "y") -and ($decision -ne  "n"))
