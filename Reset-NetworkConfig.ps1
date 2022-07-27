@@ -83,6 +83,7 @@ function Set-GoogleDNS {
     
     $networkadapters = Get-NetAdapter -Physical | Where-Object -Property status -eq up | Get-NetConnectionProfile | Where-Object -Property networkcategory -ne DomainAuthenticated |
     Tee-Object -Variable temp
+    if ($null -eq $temp){$temp = "No adapters found."}
     $log.output.add($temp)
 
     foreach ($adapter in $networkadapters) {
@@ -139,14 +140,28 @@ function Set-PreferIPV4 {
 
     $log.command.add("New-ItemProperty 'HKLM:\SYSTEM\CurrentControlSet\Services\Tcpip6\Parameters\' -Name 'DisabledComponents' -Value 0x20 -PropertyType 'DWord'")
     $log.command.add("Set-ItemProperty 'HKLM:\SYSTEM\CurrentControlSet\Services\Tcpip6\Parameters\' -Name 'DisabledComponents' -Value 0x20 -PropertyType 'DWord'")
-    New-ItemProperty “HKLM:\SYSTEM\CurrentControlSet\Services\Tcpip6\Parameters\” -Name “DisabledComponents” -Value 0x20 -PropertyType “DWord” -ErrorAction SilentlyContinue -Force |
-     Tee-Object -Variable temp; $log.output.add($temp)
-    Set-ItemProperty “HKLM:\SYSTEM\CurrentControlSet\Services\Tcpip6\Parameters\” -Name “DisabledComponents” -Value 0x20 -ErrorAction SilentlyContinue -Force |
-     Tee-Object -Variable temp; $log.output.add($temp)
+    New-ItemProperty “HKLM:\SYSTEM\CurrentControlSet\Services\Tcpip6\Parameters\” -Name “DisabledComponents” -Value 0x20 -PropertyType “DWord” -Force |
+     Tee-Object -Variable temp
+     $temp = $temp | Out-String
+     $log.output.add($temp)
+    Set-ItemProperty “HKLM:\SYSTEM\CurrentControlSet\Services\Tcpip6\Parameters\” -Name “DisabledComponents” -Value 0x20 -Force |
+     Tee-Object -Variable temp
+     $temp = $temp | Out-String
+     $log.output.add($temp)
 
     write-host "`n============================`n"
 
     start-sleep -Seconds 2
+}
+function Set-Regfix {
+    Write-host "correcting Ipv6 routing with "
+    $log.command.add("HKLM\SYSTEM\CurrentControlSet\Services\Dnscache\Parameters /v DisableParallelAandAAAA /f`nREG add HKLM\Software\Policies\Microsoft\Windows NT\DNSClient /v DisableSmartNameResolution /t REG_DWORD /d 1 /f")
+    REG delete "HKLM\Software\policies\Microsoft\Windows NT\DNSClient" /v EnableMulticast /f
+    REG add "HKLM\Software\Policies\Microsoft\Windows NT\DNSClient" /v DisableSmartNameResolution /t REG_DWORD /d 1 /f
+    REG delete "HKLM\SYSTEM\CurrentControlSet\Services\Dnscache\Parameters" /v DisableParallelAandAAAA /f
+    REG add "HKLM\SYSTEM\CurrentControlSet\Services\Dnscache\Parameters" /v DisableParallelAandAAAA /t REG_DWORD /d 1 /f | Tee-Object -Variable temp; $log.output.add($temp)
+
+    write-host "`n============================`n"
 }
 function Disable-IPv6 {
     Write-host "Disabling Ipv6"
@@ -189,6 +204,7 @@ function invoke-SubMenu {
         ("Change DNS to &Google", "Sets DNS servers to 8.8.8.8"),
         ("&Prefer IPv4 over IPv6", "Sets RegKey for prefer IPv4"),
         ("&Clear DNS Cache", "ipconfig /flushdns"),
+        ("&Fix Ipv6 routing with DisableParallelAandAAAA","disable EnableMulticast, add DisableSmartNameResolution and DisableParallelAandAAAA regkeys"),
         ("Disable Ipv&6", "Disable-NetAdapterBinding -InterfaceAlias * -ComponentID ms_tcpip6"),
         ("&Show Current Network Config", "Get-netadapter | get-NetIPConfiguration"),
         ("Show &Log", "Show log of commands for notes"),
@@ -211,6 +227,7 @@ W. Reset websocket connections (requires reboot.)
 G. Set Google DNS for Adapters
 P. Prefer IPv4 over IPv6 (requires reboot.)
 C. Clear DNS Cache
+F. Fix Ipv6 routing with DisableParallelAandAAAA (VPN fix)
 6. Disable Ipv6
 S. Show Current Network Config
 L. Show Log thus far
@@ -230,10 +247,11 @@ M. Main Menu
             3 { Set-GoogleDNS }
             4 { Set-PreferIPV4 }
             5 { reset-dnscache }
-            6 { Disable-IPv6 }
-            7 { show-currentNetworking }
-            8 { show-log }
-            9 { break }
+            6 { Set-Regfix }
+            7 { Disable-IPv6 }
+            8 { show-currentNetworking }
+            9 { show-log }
+            10 { break }
         }
         if ($result -eq 9) {break}
     }
